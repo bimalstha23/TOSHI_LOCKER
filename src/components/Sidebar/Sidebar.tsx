@@ -57,9 +57,9 @@ const Sidebar = () => {
                         <BsFillPeopleFill />
                         <p className="menu-link_text">Token Locker</p>
                     </NavLink>
-                    <NavLink to="/" className={({ isActive }) => `${isActive && 'w--current'} menu-link `}>
+                    <NavLink to="/multisender" className={({ isActive }) => `${isActive && 'w--current'} menu-link `}>
                         <FaGraduationCap />
-                        <p className="menu-link_text">Documents</p>
+                        <p className="menu-link_text">Multisender</p>
                     </NavLink>
                     <NavLink to="/" className={({ isActive }) => `${isActive && 'w--current'} menu-link `}>
                         <IoSettingsSharp />

@@ -5,6 +5,7 @@ const Liquidity = () => {
         <div className="content">
             <div className="content-top_wrap">
                 <div className="statistic-wrap">
+                    
                     <div className="contact">
                         <h3 className="heading-form lg:text-5xl text-3xl">Enter Liquidity Pair Address</h3>
                         <p className="paragraph-form">

@@ -51,7 +51,6 @@ const DashboardMain = () => {
             <div className="content-top_wrap">
                 <div className="performance-wrap">
                     <div className="form-block-2 w-form">
-
                         <h1 className="log-in__h">Welcome To<br />Toshi Locker!</h1>
                         <p className="qf-copy">Select Your Lock Type And Connect<br />Your Wallet Below To Get Started.</p>
                         <div className="input-wrapper">

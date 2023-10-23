@@ -8,7 +8,7 @@ import { Fragment, useState } from 'react';
 import metamask from '../../assets/images/MetaMask_Fox.svg';
 import WalletConnectModal from '../../modals/Walletconnectmodal';
 import toshicoin from '../../assets/images/Toshicoins.svg'
-import cointoshi from '../../assets/images/Cointoshi.svg'
+import cointoshi from '../../assets/images/cointoshi.svg'
 import MultiSenderForm from '../../components/MultiSender/MultiSenderForm';
 
 const Multisender = () => {

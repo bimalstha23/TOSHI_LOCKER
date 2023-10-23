@@ -1,4 +1,4 @@
-import { Step, StepConnector, StepLabel, Stepper, stepConnectorClasses, styled } from "@mui/material"
+import { CircularProgress, Step, StepConnector, StepLabel, Stepper, stepConnectorClasses, styled } from "@mui/material"
 import AceEditor from "react-ace";
 import { ChangeEvent, FC, Fragment, useEffect, useRef, useState } from "react";
 import { valudateWalletObject } from "../../helper/validateWalletObject";
@@ -11,6 +11,7 @@ import ethicon from '../../assets/icons/wallet/ETH.svg'
 import multisenderAbi, { multisendercontractAddress } from '../../config/multisenderAbi'
 import { MdDone } from 'react-icons/md'
 import Refresh from '../../assets/icons/Refresh.svg'
+import { Backdrop } from '@mui/material';
 
 const steps = ['Prepare', 'Approve', 'Multisend'];
 const QontoConnector = styled(StepConnector)(({ theme }) => ({
@@ -53,6 +54,7 @@ const MultiSenderForm: FC<MultiSenderFormProps> = ({ selectedChain }) => {
     const [Tokenaddress, setTokenAddress] = useState<string>('');
 
     const [Tokenbalance, setTokenBalance] = useState<any>('');
+    const [isLoading, setisLoading] = useState(false);
 
     console.log('network', network)
 
@@ -180,6 +182,7 @@ const MultiSenderForm: FC<MultiSenderFormProps> = ({ selectedChain }) => {
 
 
     const handlemultisendEth = async () => {
+        setisLoading(true)
         try {
             if (!network || !network.rpcUrl) {
                 throw new Error("Network configuration is missing or invalid.");
@@ -204,13 +207,16 @@ const MultiSenderForm: FC<MultiSenderFormProps> = ({ selectedChain }) => {
             await transaction.wait()
             enqueueSnackbar(`Transaction has been sent successfully`, { variant: 'success' });
             setActiveStep(2)
+            setisLoading(false)
         } catch (e: any) {
             enqueueSnackbar(e, { variant: 'error' });
             console.log(e, 'error')
+            setisLoading(false)
         }
     }
 
     const handleMultiSendToken = async () => {
+        setisLoading(true)
         try {
             if (!network || !network.rpcUrl || !account) {
                 throw new Error("Network configuration is missing or invalid.");
@@ -238,9 +244,11 @@ const MultiSenderForm: FC<MultiSenderFormProps> = ({ selectedChain }) => {
             await transaction.wait()
             enqueueSnackbar(`Transaction has been sent successfully`, { variant: 'success' });
             setActiveStep(2)
+            setisLoading(false)
         } catch (e: any) {
             enqueueSnackbar(e, { variant: 'error' });
             console.log(e, 'error   ')
+            setisLoading(false)
         }
     }
 
@@ -271,6 +279,7 @@ const MultiSenderForm: FC<MultiSenderFormProps> = ({ selectedChain }) => {
     }
 
     const handleSubmit = async () => {
+        setisLoading(true)
         try {
             valudateWalletObject(Data);
             if (selectedChain === 'ETH') {
@@ -282,9 +291,11 @@ const MultiSenderForm: FC<MultiSenderFormProps> = ({ selectedChain }) => {
                     enqueueSnackbar(`Please enter the token address`, { variant: 'error' });
                 }
             }
+            setisLoading(false)
         } catch (e: any) {
             enqueueSnackbar(e, { variant: 'error' });
             console.log(e, 'error')
+            setisLoading(false)
         }
     }
 
@@ -449,6 +460,13 @@ const MultiSenderForm: FC<MultiSenderFormProps> = ({ selectedChain }) => {
                     ) : null}
                 </div>
             </div>
+            {isLoading && <Backdrop
+                sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+                open={isLoading}
+            // onClick={handleClose}
+            >
+                <CircularProgress color="inherit" />
+            </Backdrop>}
         </div>
     )
 }

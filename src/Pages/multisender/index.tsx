@@ -10,7 +10,6 @@ import WalletConnectModal from '../../modals/Walletconnectmodal';
 import toshicoin from '../../assets/images/Toshicoins.svg'
 import cointoshi from '../../assets/images/cointoshi.svg'
 import MultiSenderForm from '../../components/MultiSender/MultiSenderForm';
-
 const Multisender = () => {
   const [openModal, setOpenModal] = useState(false)
   const [loading, setisLoading] = useState(false)

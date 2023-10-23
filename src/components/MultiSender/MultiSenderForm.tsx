@@ -1,7 +1,17 @@
 import { Step, StepConnector, StepLabel, Stepper, stepConnectorClasses, styled } from "@mui/material"
 import AceEditor from "react-ace";
+import { ChangeEvent, FC, Fragment, useEffect, useRef, useState } from "react";
+import { valudateWalletObject } from "../../helper/validateWalletObject";
+import { enqueueSnackbar } from "notistack";
+import { ethers } from "ethers";
+import useNetwork from "../../hooks/useNetwork";
+import ERC20ABI from "../../config/ERC20ABI";
+import { useWeb3React } from "@web3-react/core";
+import ethicon from '../../assets/icons/wallet/ETH.svg'
+import multisenderAbi, { multisendercontractAddress } from '../../config/multisenderAbi'
+import { MdDone } from 'react-icons/md'
+import Refresh from '../../assets/icons/Refresh.svg'
 
-import { ChangeEvent, Fragment, useRef, useState } from "react";
 const steps = ['Prepare', 'Approve', 'Multisend'];
 const QontoConnector = styled(StepConnector)(({ theme }) => ({
     [`&.${stepConnectorClasses.alternativeLabel}`]: {
@@ -26,51 +36,35 @@ const QontoConnector = styled(StepConnector)(({ theme }) => ({
     },
 }));
 
-const MultiSenderForm = () => {
+interface MultiSenderFormProps {
+    selectedChain: 'ETH' | 'ERC20';
+}
+
+const MultiSenderForm: FC<MultiSenderFormProps> = ({ selectedChain }) => {
     const [activeStep, setActiveStep] = useState(0);
-    const [completed, setCompleted] = useState<{
-        [k: number]: boolean;
-    }>({});
-    const [CsvFile, setCsvFile] = useState<File | null>(null);
     const [CsvData, setCsvData] = useState<string>('');
+    const [Data, setData] = useState<{
+        address: string;
+        amount: string;
+    }[]>([]);
+    const { network } = useNetwork();
+    const { account, provider } = useWeb3React();
+    const [Ethbalance, setEthBalance] = useState<any>(0);
+    const [Tokenaddress, setTokenAddress] = useState<string>('');
 
-    const totalSteps = () => {
-        return steps.length;
-    };
+    const [Tokenbalance, setTokenBalance] = useState<any>('');
 
-    const completedSteps = () => {
-        return Object.keys(completed).length;
-    };
-
-    const isLastStep = () => {
-        return activeStep === totalSteps() - 1;
-    };
-
-    const allStepsCompleted = () => {
-        return completedSteps() === totalSteps();
-    };
-
-    // const handleNext = () => {
-    //     const newActiveStep =
-    //         isLastStep() && !allStepsCompleted()
-    //             ? // It's the last step, but not all steps have been completed,
-    //             // find the first step that has been completed
-    //             steps.findIndex((step, i) => !(i in completed))
-    //             : activeStep + 1;
-    //     setActiveStep(newActiveStep);
-    // };
+    console.log('network', network)
 
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
         const selectedFile = event.target.files && event.target.files[0];
         if (selectedFile) {
-            setCsvFile(selectedFile);
             const reader = new FileReader();
             reader.onload = function (e) {
-                const csv = e.target?.result;
-                if (csv) {
-                    console.log(csv, 'csvData')
-                    setCsvData(csv);
+                const csvcontent = e.target?.result as string;
+                if (csvcontent) {
+                    setCsvData(csvcontent);
                 }
             }
             reader.readAsText(selectedFile);
@@ -79,14 +73,224 @@ const MultiSenderForm = () => {
 
     const handleDivClick = () => {
         if (fileInputRef?.current) {
-            // Programmatically trigger a click event on the hidden input
             fileInputRef?.current.click();
         }
     };
 
+    useEffect(() => {
+        const lines = CsvData.split('\n');
+        const headers = lines[0].split(',');
+        const data: {
+            address: string;
+            amount: string;
+        }[] = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',');
+            const row: any = {};
+            for (let j = 0; j < headers.length; j++) {
+                row[headers[j]] = values[j];
+            }
+            data.push(row);
+        }
+        setData(data);
+    }, [CsvData])
+
+    const handleNextClicked = () => {
+        try {
+            if (selectedChain === 'ETH') {
+                valudateWalletObject(Data);
+                setActiveStep(1);
+            } else {
+                if (Tokenaddress !== '') {
+                    valudateWalletObject(Data);
+                    setActiveStep(1);
+                } else {
+                    enqueueSnackbar(`Please enter the token address`, { variant: 'error' });
+                }
+            }
+        } catch (e: any) {
+            console.log('error something went wrong ', e.message)
+            enqueueSnackbar(e.message, { variant: 'error' });
+        }
+
+    }
+
+
+    const getEthBalance = async () => {
+        try {
+            if (!network || !network.rpcUrl) {
+                throw new Error("Network configuration is missing or invalid.");
+            }
+            if (account) {
+                const provider = new ethers.providers.JsonRpcProvider(
+                    network?.rpcUrl
+                )
+                const balance = await provider.getBalance(account);
+                setEthBalance(Number(ethers.utils.formatEther(balance)).toFixed(5))
+            }
+
+        } catch (e: any) {
+            console.log(e, 'error getting blc')
+        }
+    }
+
+
+    const getERC20TokenBalance = async () => {
+        try {
+            if (!network || !network.rpcUrl) {
+                throw new Error("Network configuration is missing or invalid.");
+            }
+            if (!Tokenaddress) {
+                throw new Error("Please enter the token address");
+            }
+            if (account) {
+                const provider = new ethers.providers.JsonRpcProvider(
+                    network?.rpcUrl
+                )
+                const contract = new ethers.Contract(
+                    Tokenaddress,
+                    ERC20ABI,
+                    provider
+                )
+                const balance = await contract.balanceOf(account)
+                setTokenBalance(ethers.utils.formatEther(balance))
+            }
+
+        } catch (e: any) {
+            console.log(e, 'error getting blc')
+        }
+    }
+
+
+    useEffect(() => {
+        if (account) {
+            getEthBalance()
+        }
+    }, [account])
+    useEffect(() => {
+        if (account && Tokenaddress) {
+            getERC20TokenBalance()
+        }
+    }, [account, Tokenaddress])
+
+    const TotalAmountofToken = Data.reduce((acc, item) => {
+        return acc + Number(item.amount)
+    }, 0)
+
+
+    const handlemultisendEth = async () => {
+        try {
+            if (!network || !network.rpcUrl) {
+                throw new Error("Network configuration is missing or invalid.");
+            }
+            if (network.multisendercontractAddress === undefined) {
+                throw new Error("Multisender contract address is missing or invalid.");
+            }
+            const signer = provider?.getSigner();
+            const contract = new ethers.Contract(
+                network.multisendercontractAddress,
+                multisenderAbi,
+                signer
+            )
+            const address = Data.map((item) => item.address)
+            const amount = Data.map((item) => ethers.utils.parseEther(item.amount.toString()))
+            const fees = await getFeesInETH('0x0000000000000000000000000000000000000000')
+            const transaction = await contract.multisendETH(address, amount, {
+                value: fees,
+                gasLimit: 500000 // Set a higher gas limit
+            })
+
+            await transaction.wait()
+            enqueueSnackbar(`Transaction has been sent successfully`, { variant: 'success' });
+            setActiveStep(2)
+        } catch (e: any) {
+            enqueueSnackbar(e, { variant: 'error' });
+            console.log(e, 'error')
+        }
+    }
+
+    const handleMultiSendToken = async () => {
+        try {
+            if (!network || !network.rpcUrl || !account) {
+                throw new Error("Network configuration is missing or invalid.");
+            }
+            if (!Tokenaddress) {
+                throw new Error("Please enter the token address");
+            }
+            if (network.multisendercontractAddress === undefined) {
+                throw new Error("Multisender contract address is missing or invalid.");
+            }
+            const signer = provider?.getSigner();
+            const contract = new ethers.Contract(
+                network.multisendercontractAddress,
+                multisenderAbi,
+                signer
+            )
+            const address = Data.map((item) => item.address)
+            const amount = Data.map((item) => ethers.utils.parseEther(item.amount.toString()))
+            const fees = await getFeesInETH(Tokenaddress)
+            const transaction = await contract.multisendToken(Tokenaddress, address, amount, {
+                value: fees,
+                gasLimit: 500000 // Set a higher gas limit
+
+            })
+            await transaction.wait()
+            enqueueSnackbar(`Transaction has been sent successfully`, { variant: 'success' });
+            setActiveStep(2)
+        } catch (e: any) {
+            enqueueSnackbar(e, { variant: 'error' });
+            console.log(e, 'error   ')
+        }
+    }
+
+
+
+    const getFeesInETH = async (tokenad: string) => {
+        try {
+            if (!network || !network.rpcUrl) {
+                throw new Error("Network configuration is missing or invalid.");
+            }
+            if (!account || !provider) {
+                throw new Error("Please connect your wallet");
+            }
+
+            const signer = provider?.getSigner();
+            const contract = new ethers.Contract(
+                multisendercontractAddress,
+                multisenderAbi,
+                signer
+            )
+            const feeInEther = await contract.getFeesInETH(tokenad);
+            console.log(feeInEther, 'feeInEther')
+            return feeInEther
+        } catch (e: any) {
+            enqueueSnackbar(e, { variant: 'error' });
+            console.log(e, 'error getting Fees')
+        }
+    }
+
+    const handleSubmit = async () => {
+        try {
+            valudateWalletObject(Data);
+            if (selectedChain === 'ETH') {
+                await handlemultisendEth()
+            } else {
+                if (Tokenaddress) {
+                    await handleMultiSendToken()
+                } else {
+                    enqueueSnackbar(`Please enter the token address`, { variant: 'error' });
+                }
+            }
+        } catch (e: any) {
+            enqueueSnackbar(e, { variant: 'error' });
+            console.log(e, 'error')
+        }
+    }
+
     return (
-        <div className=" rounded-toshi w-full shadow-lg h-[80%] bg-white flex flex-col justify-center items-center">
-            <div className="w-full px-32">
+        <div className=" rounded-toshi w-full shadow-lg h-[80%] bg-white flex flex-col justify-start items-start pt-20">
+            <div className="w-full lg:px-32 px-1">
                 <Stepper activeStep={activeStep} connector={<QontoConnector />}>
                     {steps.map((label) => (
                         <Step
@@ -114,32 +318,30 @@ const MultiSenderForm = () => {
                         </Step>
                     ))}
                 </Stepper>
-
                 <div>
-                    {allStepsCompleted() ? (
-                        <Fragment>
-                            <h1>
-                                All steps completed - you&apos;re finished
-                            </h1>
-                        </Fragment>
-                    ) : activeStep === 0 ? (
+                    {activeStep === 0 ? (
                         <Fragment>
                             <div className="w-full mt-5 flex flex-col gap-5" >
-                                <div>
-                                    <label htmlFor="tokenaddress" className="text-black text-2xl font-bold">Token Address</label>
-                                    <input type="text" className="form-field w-full" maxLength={256} name="tokenaddress" data-name="Tokenaddress" placeholder="Token Address" />
-                                </div>
+
+                                {selectedChain === 'ERC20' ?
+                                    <div>
+                                        <label htmlFor="tokenaddress" className="text-black text-2xl font-bold">Token Address</label>
+                                        <input onChange={(e) => setTokenAddress(e.target.value)} type="text" className="form-field w-full" maxLength={256} name="tokenaddress" data-name="Tokenaddress" placeholder="Token Address" />
+                                    </div> : null
+                                }
+
                                 <div>
                                     <label htmlFor="csv" className="text-black text-2xl font-bold">
                                         List of Addresses in CSV
                                     </label>
                                     <AceEditor
-                                        className="w-full rounded-toshi"
+                                        className="w-full lg:rounded-toshi"
                                         width="100%"
                                         height="300px"
                                         mode="csv"
                                         theme="github"
-                                        value={CsvData}
+                                        value={CsvData as string}
+                                        onChange={(value) => setCsvData(value)}
                                         name="csv"
                                         editorProps={{ $blockScrolling: true }}
                                     />
@@ -162,10 +364,87 @@ const MultiSenderForm = () => {
                                         </div>
                                     </div>
                                 </div>
-                                <button className="bg-toshimain text-white font-bold text-2xl py-3 rounded-toshi">
+                                <button onClick={handleNextClicked} className="bg-toshimain text-white font-bold text-2xl py-3 rounded-toshi">
                                     Next
                                 </button>
                             </div>
+                        </Fragment>
+                    ) : activeStep === 1 ? (
+                        <Fragment>
+                            <div className="w-full flex flex-col h-full rounded-toshi gap-4 mt-4">
+                                <div className="flex flex-row justify-center items-center w-full gap-3">
+                                    <div className="w-full flex flex-row justify-center items-center bg-[#22152F] gap-5 rounded-toshi py-3">
+                                        <img className="rounded-full w-8" src={ethicon} alt="" />
+                                        <div className="flex flex-col justify-center items-center">
+                                            <h1 className="text-2xl font-bold">
+                                                {Ethbalance} ETH
+                                            </h1>
+                                            <p className="text-[#908A8A] text-lg">
+                                                Total Eth Balance
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {selectedChain === 'ERC20' && <div className="w-full flex flex-row justify-center items-center bg-[#22152F] gap-5 rounded-toshi py-3">
+                                        <img className="rounded-full w-8" src={ethicon} alt="" />
+                                        <div className="flex flex-col justify-center items-center">
+                                            <h1 className="text-2xl font-bold">
+                                                {Tokenbalance} Token
+                                            </h1>
+                                            <p className="text-[#908A8A] text-lg">
+                                                Total Token Balance
+                                            </p>
+                                        </div>
+                                    </div>}
+                                </div>
+
+                                {<div className="border-2 border-toshimain rounded-toshi w-full flex flex-col justify-center items-center py-3">
+                                    <h1 className="text-2xl font-bold text-toshimain">
+                                        {TotalAmountofToken}
+                                    </h1>
+                                    <p className="text-black text-lg font-bold">
+                                        Total of  Token Ready To send
+                                    </p>
+                                </div>}
+
+                                <div className="flex flex-col w-full justify-start items-start h-[300px] overflow-y-scroll">
+                                    <h1 className="text-base font-bold text-black text-start w-full">List of recipients</h1>
+                                    {
+                                        Data.map((item, index) => (
+                                            <div key={index} className="w-full flex flex-row justify-between items-center text-black border-b-2 ">
+                                                <h1 className="text-black font-bold lg:text-base text-[10px]">
+                                                    {item.address}
+                                                </h1>
+                                                <h1 className="text-black font-bold lg:text-lg text-xs">
+                                                    {item.amount} Token
+                                                </h1>
+                                            </div>
+                                        ))
+                                    }
+                                </div>
+                                <button onClick={handleSubmit} className="bg-toshimain text-white font-bold text-2xl py-3 rounded-toshi">
+                                    Next
+                                </button>
+                            </div>
+                        </Fragment>
+                    ) : activeStep === 2 ? (
+                        <Fragment>
+                            <div className="w-full h-96 flex flex-col justify-center items-center shadow-2xl rounded-toshi mt-4">
+                                <div className="rounded-full text-white bg-toshimain">
+                                    <MdDone size={150} />
+                                </div>
+                                <h1 className="text-black font-bold text-5xl">
+                                    Success
+                                </h1>
+                                <p className="text-toshimain ">
+                                    Your token has been successfully sent to the given wallet addresses
+                                </p>
+                            </div>
+                            <button onClick={() => setActiveStep(0)} className="bg-toshimain flex flex-row justify-center items-center gap-5  text-white font-bold text-2xl py-3 w-full   mt-3 rounded-toshi">
+                                <span>
+                                    Send Again
+                                </span>
+                                <img src={Refresh} alt="" />
+                            </button>
                         </Fragment>
                     ) : null}
                 </div>
@@ -173,7 +452,5 @@ const MultiSenderForm = () => {
         </div>
     )
 }
-
-
 
 export default MultiSenderForm

@@ -17,6 +17,7 @@ const Multisender = () => {
   const { account } = useWeb3React();
   const { setWalletType, network, setChain } =
     useNetwork() as NetworkContextType;
+  const [selectedChain, setSelectedChain] = useState<'ETH' | 'ERC20'>('ETH');
 
   const handleWalletConnect = async () => {
     if (!network?.chainId) return;
@@ -45,6 +46,11 @@ const Multisender = () => {
       );
     }
   }
+
+  const isSelected = (chain: 'ETH' | 'ERC20') => {
+    return chain === selectedChain;
+  }
+
   return (
     <div className="content">
       <div className="content-top_wrap">
@@ -53,12 +59,12 @@ const Multisender = () => {
           {/* <p className="qf-copy">Select Your Lock Type And Connect<br />Your Wallet Below To Get Started.</p> */}
           <p className='text-sm text-black pb-5'>Available Networks</p>
 
-          <div className="flex flex-col w-full gap-3">
-            <div className=" flex flex-row justify-start items-center w-full gap-5 px-5 py-2 cursor-pointer">
+          <div className="flex flex-col w-full gap-3 ">
+            <div onClick={() => setSelectedChain('ETH')} className={` ${isSelected('ETH') ? 'bg-[#F3F1EF]' : ''} rounded-toshi flex flex-row justify-start items-center w-full gap-5 px-5 py-2 cursor-pointer `}>
               <img className='rounded-full w-8 h-8' src={Eth} alt="" />
               <p className="paragraph">Ethereum</p>
             </div>
-            <div className=" flex flex-row justify-start items-center w-full gap-5 px-5 py-2 cursor-pointer">
+            <div onClick={() => setSelectedChain('ERC20')} className={` ${isSelected('ERC20') ? 'bg-[#F3F1EF]' : ''} rounded-toshi flex flex-row justify-start items-center w-full gap-5 px-5 py-2 cursor-pointer`}>
               <div className='rounded-full w-8 h-8 bg-toshimain' />
               <p className="paragraph">ERC-20</p>
             </div>
@@ -90,15 +96,15 @@ const Multisender = () => {
           }
         </div>
         <div className="w-full rounded-toshi h-full flex flex-col gap-6">
-          <div className='w-full bg-toshimain h-[20%] rounded-toshi flex flex-row justify-center items-center'>
-            <img src={cointoshi} alt="" />
+          <div className='w-full bg-toshimain h-[20%] rounded-toshi py-3 flex flex-row justify-center items-center'>
+            <img className='lg:block hidden' src={cointoshi} alt="" />
             <div>
-              <h1 className="log-in__h text-white p-0 m-0">Welcome To<br />Toshi Multisender</h1>
+              <h1 className=" text-white p-0 m-0 lg:text-3xl text-sm text-center font-bold">Welcome To<br />Toshi Multisender</h1>
               <p className='text-[#FFBD45]'>Select A Token Address And Add CSV To Get Started.</p>
             </div>
-            <img className='transform -translate-y-4' src={toshicoin} alt="" />
+            <img className='transform -translate-y-4 lg:block hidden' src={toshicoin} alt="" />
           </div>
-          <MultiSenderForm />
+          <MultiSenderForm selectedChain={selectedChain} />
         </div>
       </div>
       {

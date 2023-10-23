@@ -12,7 +12,7 @@ import { metaMask } from '../../wallet/provider';
 import WalletConnectModal from '../../modals/Walletconnectmodal';
 import basechain from '../../assets/images/basechain.svg';
 import { HiHome } from 'react-icons/hi'
-import { Link, NavLink } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { RiNftFill } from 'react-icons/ri'
 
 const Sidebar = () => {

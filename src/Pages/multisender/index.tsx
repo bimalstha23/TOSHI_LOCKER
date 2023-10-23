@@ -71,7 +71,7 @@ const Multisender = () => {
           </div>
 
           {!account ? <Fragment >
-            <button className="wallet_btn-2 w-full mt-40" onClick={() => setOpenModal(true)} disabled={loading}>
+            <button className="wallet_btn-2 w-full lg:mt-40 mt-3" onClick={() => setOpenModal(true)} disabled={loading}>
               <h4 className="connect_text">Connect Wallet</h4>
             </button>
             <div className="or-wrap">
@@ -90,7 +90,7 @@ const Multisender = () => {
                 </div>
               </button>
             </div>
-          </Fragment> : <button className="wallet_btn-2 w-full" onClick={() => DisconnectWallet()} disabled={loading}>
+          </Fragment> : <button className="wallet_btn-2 w-full lg:mt-40 mt-4" onClick={() => DisconnectWallet()} disabled={loading}>
             <h4 className="connect_text">Disconnect Wallet</h4>
           </button>
           }
